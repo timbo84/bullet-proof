@@ -61,9 +61,9 @@ export function MediaPlayerScreen({ id }) {
             allowFullScreen
           />
         </div>
-      ) : media.type === "video" ? (
+      ) : media.media_type === "video" ? (
         <video src={media.url} controls className="w-full rounded-lg border border-border" />
-      ) : media.type === "podcast" || media.type === "audio" ? (
+      ) : media.media_type === "audio" ? (
         <audio src={media.url} controls className="w-full" />
       ) : (
         <Card>
@@ -81,7 +81,7 @@ export function MediaPlayerScreen({ id }) {
       <Card className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-lg font-bold text-text">{media.title}</h1>
-          <Badge tone="primary">{media.points} pts</Badge>
+          <Badge tone="primary">{media.points_on_complete} pts</Badge>
         </div>
         <p className="text-sm text-text">{media.description}</p>
       </Card>
@@ -99,11 +99,13 @@ export function MediaPlayerScreen({ id }) {
         ) : (
           <form onSubmit={handleComplete} className="space-y-3">
             <Textarea
-              label="Reflection (optional)"
+              label="Reflection"
+              required
               rows={4}
+              className="min-h-55"
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
-              placeholder="What stood out to you?"
+              placeholder="What stood out to you? (sent to the Director)"
             />
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" loading={saving}>

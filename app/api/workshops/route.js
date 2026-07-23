@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getCollection, stripMongoId } from "@/lib/db";
 
-const CAN_MANAGE_ROLES = ["Director", "Instructor"];
+const CAN_CREATE_ROLES = ["Director", "Instructor"];
 
 export async function GET() {
   const session = await getSession();
@@ -12,9 +12,21 @@ export async function GET() {
   }
 
   const workshops = await getCollection("workshops");
-  const filter =
-    session.role === "Director" ? {} : { $or: [{ status: { $exists: false } }, { status: "approved" }] };
-  const all = await workshops.find(filter).sort({ created_at: -1 }).toArray();
+  let filter;
+  if (session.role === "Director") {
+    filter = {};
+  } else if (session.role === "Officer") {
+    // District scoping needs the full user doc (session only carries id/role/email).
+    const users = await getCollection("users");
+    const me = await users.findOne({ id: session.id });
+    filter = { status: "approved", district_id: me?.district_id ?? null };
+  } else if (session.role === "Instructor") {
+    filter = { $or: [{ status: "approved" }, { uploader_id: session.id }] };
+  } else {
+    filter = { status: "approved" };
+  }
+
+  const all = await workshops.find(filter).sort({ date: -1 }).toArray();
 
   const completions = await getCollection("workshop_completions");
   const myCompletions = await completions.find({ user_id: session.id }).toArray();
@@ -27,30 +39,28 @@ export async function GET() {
 
 export async function POST(request) {
   const session = await getSession();
-  if (!session || !CAN_MANAGE_ROLES.includes(session.role)) {
+  if (!session || !CAN_CREATE_ROLES.includes(session.role)) {
     return NextResponse.json({ detail: "You can't create workshops." }, { status: 403 });
   }
 
   const body = await request.json();
-  const { title, description, date, location, points, district_id } = body;
-  if (!title) {
-    return NextResponse.json({ detail: "Title is required." }, { status: 400 });
+  const { title, description, date, start_time, end_time, location, district_id, points } = body;
+  if (!title || !date) {
+    return NextResponse.json({ detail: "Title and date are required." }, { status: 400 });
   }
-
-  const users = await getCollection("users");
-  const creator = await users.findOne({ id: session.id });
 
   const doc = {
     id: randomUUID(),
     title,
     description: description || "",
-    date: date || null,
-    location: location || "TBD",
+    date,
+    start_time: start_time || null,
+    end_time: end_time || null,
+    location: location || null,
     district_id: district_id || null,
-    points: Number(points) || 0,
     status: session.role === "Director" ? "approved" : "pending",
-    created_by: session.id,
-    created_by_name: creator?.full_name || session.email,
+    points: Number(points) || 20,
+    uploader_id: session.id,
     created_at: new Date().toISOString(),
   };
 

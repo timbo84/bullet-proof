@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getCollection, stripMongoId } from "@/lib/db";
+import { todayCentral } from "@/lib/dates";
 
 export async function GET() {
   const session = await getSession();
@@ -8,15 +9,24 @@ export async function GET() {
     return NextResponse.json({ detail: "Not authenticated." }, { status: 401 });
   }
 
-  const items = await getCollection("declaration_items");
-  const completions = await getCollection("declaration_completions");
+  const declarationsList = await getCollection("declarations_list");
+  const doc = await declarationsList.findOne({ id: "singleton" });
 
-  const activeItems = await items.find({ active: true }).sort({ created_at: 1 }).toArray();
-  const today = new Date().toISOString().slice(0, 10);
-  const completion = await completions.findOne({ user_id: session.id, date: today });
+  if (!doc) {
+    return NextResponse.json({ items: [], points: 15, completedToday: false });
+  }
+
+  const dailyCompletions = await getCollection("daily_completions");
+  const completion = await dailyCompletions.findOne({
+    user_id: session.id,
+    completion_date: todayCentral(),
+  });
+
+  const items = [...(doc.items || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return NextResponse.json({
-    items: activeItems.map(stripMongoId),
+    items: items.map(stripMongoId),
+    points: doc.points ?? 15,
     completedToday: Boolean(completion),
   });
 }

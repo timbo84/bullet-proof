@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { formatTime12 } from "@/lib/dates";
 import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
 
 export function WorkshopDetail({ id }) {
@@ -48,7 +49,10 @@ export function WorkshopDetail({ id }) {
           <Badge tone="primary">{workshop.points} pts</Badge>
         </div>
         <p className="text-sm text-text-muted">
-          {workshop.date} {workshop.location ? `· ${workshop.location}` : ""}
+          {workshop.date}
+          {workshop.start_time ? ` · ${formatTime12(workshop.start_time)}` : ""}
+          {workshop.end_time ? `–${formatTime12(workshop.end_time)}` : ""}
+          {workshop.location ? ` · ${workshop.location}` : ""}
         </p>
         <p className="text-sm text-text">{workshop.description}</p>
       </Card>
@@ -65,11 +69,13 @@ export function WorkshopDetail({ id }) {
         ) : (
           <form onSubmit={handleComplete} className="space-y-3">
             <Textarea
-              label="Reflection (optional)"
+              label="Reflection"
+              required
               rows={4}
+              className="min-h-55"
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
-              placeholder="What stood out to you?"
+              placeholder="What stood out to you? (sent to the Director)"
             />
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" loading={saving}>

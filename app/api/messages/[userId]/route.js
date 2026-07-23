@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
         { from_user_id: userId, to_user_id: session.id },
       ],
     })
-    .sort({ created_at: 1 })
+    .sort({ sent_at: 1 })
     .toArray();
 
   await messages.updateMany(
@@ -46,16 +46,13 @@ export async function POST(request, { params }) {
     return NextResponse.json({ detail: "Not authenticated." }, { status: 401 });
   }
   const { userId } = await params;
-  const { content } = await request.json();
-  if (!content || !content.trim()) {
+  const { body } = await request.json();
+  if (!body || !body.trim()) {
     return NextResponse.json({ detail: "Message can't be empty." }, { status: 400 });
   }
 
   const users = await getCollection("users");
-  const [me, otherUser] = await Promise.all([
-    users.findOne({ id: session.id }),
-    users.findOne({ id: userId }),
-  ]);
+  const otherUser = await users.findOne({ id: userId });
   if (!otherUser) {
     return NextResponse.json({ detail: "User not found." }, { status: 404 });
   }
@@ -63,11 +60,10 @@ export async function POST(request, { params }) {
   const doc = {
     id: randomUUID(),
     from_user_id: session.id,
-    from_name: me?.nickname || me?.full_name || session.email,
     to_user_id: userId,
-    content: content.trim(),
+    body: body.trim(),
     read: false,
-    created_at: new Date().toISOString(),
+    sent_at: new Date().toISOString(),
   };
 
   const messages = await getCollection("messages");

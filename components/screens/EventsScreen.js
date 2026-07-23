@@ -4,10 +4,11 @@ import { useState } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/components/AuthProvider";
 import { fetcher } from "@/lib/fetcher";
+import { MEDIA_CATEGORIES } from "@/lib/constants";
+import { formatTime12 } from "@/lib/dates";
 import {
   Button,
   Card,
-  CATEGORY_COLORS,
   CategoryTag,
   EmptyState,
   Input,
@@ -16,9 +17,6 @@ import {
   Textarea,
 } from "@/components/ui";
 
-const CATEGORIES = Object.keys(CATEGORY_COLORS);
-const CAN_CREATE_ROLES = ["Director", "Instructor"];
-
 const EMPTY_FORM = {
   title: "",
   description: "",
@@ -26,7 +24,7 @@ const EMPTY_FORM = {
   start_time: "",
   end_time: "",
   location: "",
-  category: CATEGORIES[0],
+  category: MEDIA_CATEGORIES[0],
   rsvp_url: "",
 };
 
@@ -59,12 +57,13 @@ export function EventsScreen() {
     mutate();
   }
 
-  async function handleApprove(id) {
-    await fetch(`/api/events/${id}/approve`, { method: "POST" });
+  const canCreate = user?.role === "Director";
+
+  async function handleDelete(id) {
+    if (!window.confirm("Delete this event? This can't be undone.")) return;
+    await fetch(`/api/events/${id}`, { method: "DELETE" });
     mutate();
   }
-
-  const canCreate = CAN_CREATE_ROLES.includes(user?.role);
 
   return (
     <div className="space-y-6">
@@ -96,7 +95,7 @@ export function EventsScreen() {
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                 className="rounded-md border border-border bg-surface-raised px-3 py-2.5 text-text focus:border-primary focus:outline-none"
               >
-                {CATEGORIES.map((c) => (
+                {MEDIA_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -164,38 +163,32 @@ export function EventsScreen() {
                 <p className="font-semibold text-text">{event.title}</p>
                 <p className="text-sm text-text-muted">
                   {event.date}
-                  {event.start_time ? ` · ${event.start_time}` : ""}
-                  {event.end_time ? `–${event.end_time}` : ""} · {event.location}
+                  {event.start_time ? ` · ${formatTime12(event.start_time)}` : ""}
+                  {event.end_time ? `–${formatTime12(event.end_time)}` : ""}
+                  {event.location ? ` · ${event.location}` : ""}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                {event.status === "pending" && (
-                  <span className="rounded-pill border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                    Pending
-                  </span>
-                )}
-                <CategoryTag category={event.category} />
-              </div>
+              <CategoryTag category={event.category} />
             </div>
             {event.description && <p className="text-sm text-text">{event.description}</p>}
-            <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex items-center gap-3">
               {event.rsvp_url && (
                 <a
                   href={event.rsvp_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-primary"
+                  className="text-sm font-semibold text-primary"
                 >
                   RSVP
                 </a>
               )}
-              {event.created_by_name && (
-                <span className="text-text-muted">Added by {event.created_by_name}</span>
-              )}
-              {user?.role === "Director" && event.status === "pending" && (
-                <Button variant="outline" onClick={() => handleApprove(event.id)} className="ml-auto">
-                  Approve
-                </Button>
+              {user?.role === "Director" && (
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="ml-auto text-sm text-text-secondary hover:text-danger"
+                >
+                  Delete
+                </button>
               )}
             </div>
           </Card>

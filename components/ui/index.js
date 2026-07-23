@@ -42,7 +42,9 @@ export function Card({ className = "", children, ...props }) {
 
 export function SectionTitle({ children, className = "" }) {
   return (
-    <h2 className={`text-sm font-semibold uppercase tracking-wide text-text-secondary ${className}`}>
+    <h2
+      className={`font-heading text-sm font-semibold uppercase tracking-widest text-text-secondary ${className}`}
+    >
       {children}
     </h2>
   );
@@ -105,17 +107,18 @@ export function Badge({ tone = "neutral", children, className = "" }) {
   );
 }
 
+// Immutable per design_guidelines.json. Any category not in this set (e.g.
+// the legacy "Community" tag) falls back to the Wellness color, spec-approved.
 export const CATEGORY_COLORS = {
   Finance: "var(--color-category-finance)",
   Fitness: "var(--color-category-fitness)",
   Family: "var(--color-category-family)",
   Wellness: "var(--color-category-wellness)",
   Training: "var(--color-category-training)",
-  Community: "var(--color-category-community)",
 };
 
 export function CategoryTag({ category }) {
-  const color = CATEGORY_COLORS[category] || "var(--color-text-muted)";
+  const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.Wellness;
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-xs font-semibold"
@@ -173,7 +176,9 @@ export function PageHeader({ title, subtitle, action }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <h1 className="text-xl font-bold text-text">{title}</h1>
+        <h1 className="font-heading text-2xl font-bold uppercase tracking-tight text-text">
+          {title}
+        </h1>
         {subtitle && <p className="text-sm text-text-muted">{subtitle}</p>}
       </div>
       {action}

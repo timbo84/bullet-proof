@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const competitions = await getCollection("competitions");
-  const all = await competitions.find({}).sort({ created_at: -1 }).toArray();
+  const all = await competitions.find({}).sort({ start_date: -1 }).toArray();
   return NextResponse.json({ competitions: all.map(stripMongoId) });
 }
 
@@ -20,19 +20,21 @@ export async function POST(request) {
     return NextResponse.json({ detail: "Only Directors can create competitions." }, { status: 403 });
   }
 
-  const { name, description, end_date } = await request.json();
-  if (!name || !end_date) {
-    return NextResponse.json({ detail: "Name and end date are required." }, { status: 400 });
+  const { title, description, start_date, end_date } = await request.json();
+  if (!title || !start_date || !end_date) {
+    return NextResponse.json(
+      { detail: "Title, start date, and end date are required." },
+      { status: 400 }
+    );
   }
 
   const doc = {
     id: randomUUID(),
-    name,
+    title,
     description: description || "",
+    start_date,
     end_date,
     status: "active",
-    winner_user_id: null,
-    tournament_id: null,
     created_by: session.id,
     created_at: new Date().toISOString(),
   };

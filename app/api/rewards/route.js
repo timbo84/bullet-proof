@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getCollection, stripMongoId } from "@/lib/db";
+import { creditPoints } from "@/lib/points";
+import { sendSystemMessage } from "@/lib/messages";
 
 export async function GET(request) {
   const session = await getSession();
@@ -10,14 +12,7 @@ export async function GET(request) {
   }
 
   const rewards = await getCollection("rewards");
-  const { searchParams } = new URL(request.url);
-  const requestedUserId = searchParams.get("userId");
-
-  let filter = { user_id: session.id };
-  if (session.role === "Director") {
-    filter = requestedUserId ? { user_id: requestedUserId } : {};
-  }
-
+  const filter = session.role === "Director" ? {} : { user_id: session.id };
   const list = await rewards.find(filter).sort({ awarded_at: -1 }).toArray();
   return NextResponse.json({ rewards: list.map(stripMongoId) });
 }
@@ -28,35 +23,39 @@ export async function POST(request) {
     return NextResponse.json({ detail: "Only Directors can award rewards." }, { status: 403 });
   }
 
-  const { user_id, type, value, label, points_awarded } = await request.json();
+  const { user_id, label, points, competition_id, type } = await request.json();
+  const pointsNum = Number(points);
   if (!user_id || !label) {
-    return NextResponse.json({ detail: "A user and label are required." }, { status: 400 });
+    return NextResponse.json({ detail: "A recipient and label are required." }, { status: 400 });
+  }
+  if (!Number.isFinite(pointsNum) || pointsNum <= 0) {
+    return NextResponse.json({ detail: "Points must be a positive number." }, { status: 400 });
   }
 
   const users = await getCollection("users");
-  const recipient = await users.findOne({ id: user_id });
-  if (!recipient) {
+  const target = await users.findOne({ id: user_id });
+  if (!target) {
     return NextResponse.json({ detail: "User not found." }, { status: 404 });
   }
 
   const doc = {
     id: randomUUID(),
     user_id,
-    type: type || "bonus",
-    value: Number(value) || 0,
+    type: type || "reward",
     label,
-    competition_id: null,
+    value: 0,
+    points_awarded: pointsNum,
+    competition_id: competition_id || null,
     awarded_by: session.id,
-    ...(points_awarded ? { points_awarded: Number(points_awarded) } : {}),
     awarded_at: new Date().toISOString(),
   };
 
   const rewards = await getCollection("rewards");
   await rewards.insertOne(doc);
+  await creditPoints(target, pointsNum);
 
-  if (points_awarded) {
-    await users.updateOne({ id: user_id }, { $inc: { points: Number(points_awarded) } });
-  }
+  const body = `Reward from CJ: ${label}\n\n+${pointsNum} pts credited to your account. Finish Strong.`;
+  await sendSystemMessage(session.id, target.id, body);
 
   return NextResponse.json({ reward: doc }, { status: 201 });
 }

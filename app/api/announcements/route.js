@@ -28,9 +28,6 @@ export async function POST(request) {
     return NextResponse.json({ detail: "Invalid target role." }, { status: 400 });
   }
 
-  const users = await getCollection("users");
-  const sender = await users.findOne({ id: session.id });
-
   const announcement = {
     id: randomUUID(),
     title,
@@ -43,13 +40,17 @@ export async function POST(request) {
   const announcements = await getCollection("announcements");
   await announcements.insertOne(announcement);
 
-  // Fan out as direct messages so recipients see it in their inbox.
+  // Fan out as direct messages so recipients see it in their inbox. "All"
+  // excludes Director — the broadcast comes from CJ, not to CJ.
   const recipientFilter = {
     active: true,
-    id: { $ne: session.id },
-    ...(announcement.target_role !== "All" ? { role: announcement.target_role } : {}),
+    role:
+      announcement.target_role === "All"
+        ? { $in: ["Officer", "Chaplain", "Partner", "Instructor"] }
+        : announcement.target_role,
     ...(announcement.target_district_id ? { district_id: announcement.target_district_id } : {}),
   };
+  const users = await getCollection("users");
   const recipients = await users.find(recipientFilter).project({ id: 1 }).toArray();
 
   if (recipients.length > 0) {
@@ -59,11 +60,10 @@ export async function POST(request) {
       recipients.map((r) => ({
         id: randomUUID(),
         from_user_id: session.id,
-        from_name: sender?.full_name || "Director",
         to_user_id: r.id,
-        content: `${title}\n\n${body}`,
+        body: `${title}\n\n${body}`,
         read: false,
-        created_at: now,
+        sent_at: now,
       }))
     );
   }

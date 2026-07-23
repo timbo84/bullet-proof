@@ -72,7 +72,7 @@ export function MeScreen() {
         </div>
         <div className="flex items-center gap-2">
           <Badge tone="primary">{user.role}</Badge>
-          <Badge>{user.points ?? 0} pts</Badge>
+          {user.role !== "Director" && <Badge>{user.points ?? 0} pts</Badge>}
         </div>
       </Card>
 
@@ -101,7 +101,7 @@ export function MeScreen() {
           {rewards?.map((r) => (
             <li key={r.id} className="flex items-center justify-between text-sm">
               <span className="text-text">{r.label}</span>
-              {r.value > 0 && <span className="font-semibold text-primary">${r.value}</span>}
+              <span className="font-semibold text-primary">+{r.points_awarded} pts</span>
             </li>
           ))}
         </ul>

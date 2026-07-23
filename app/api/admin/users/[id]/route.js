@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getCollection } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 
-const EDITABLE_FIELDS = ["role", "district_id", "active", "linked_officer_id"];
+const EDITABLE_FIELDS = ["role", "district_id", "active", "linked_officer_nickname"];
 
 export async function PATCH(request, { params }) {
   const session = await getSession();
@@ -31,4 +31,25 @@ export async function PATCH(request, { params }) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request, { params }) {
+  const session = await getSession();
+  if (!session || session.role !== "Director") {
+    return NextResponse.json({ detail: "Not authorized." }, { status: 403 });
+  }
+  const { id } = await params;
+  if (id === session.id) {
+    return NextResponse.json(
+      { detail: "You can't delete your own account from here." },
+      { status: 400 }
+    );
+  }
+
+  const users = await getCollection("users");
+  const result = await users.deleteOne({ id });
+  if (result.deletedCount === 0) {
+    return NextResponse.json({ detail: "User not found." }, { status: 404 });
+  }
+  return NextResponse.json({ detail: "Deleted." });
 }

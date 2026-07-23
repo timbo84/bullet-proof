@@ -5,9 +5,9 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { Button, Card, Input, PageHeader, Spinner } from "@/components/ui";
 
-const REWARD_TYPES = ["gift_card", "bonus", "cruise_entry"];
+const REWARD_TYPES = ["reward", "bonus", "gift_card"];
 
-const EMPTY_FORM = { user_id: "", type: REWARD_TYPES[0], value: "", label: "", points_awarded: "" };
+const EMPTY_FORM = { user_id: "", type: REWARD_TYPES[0], label: "", points: "" };
 
 export function AdminRewardsScreen() {
   const { data: usersData } = useSWR("/api/users/directory", fetcher);
@@ -41,7 +41,7 @@ export function AdminRewardsScreen() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Rewards" subtitle="Award points, gift cards, and bonuses" />
+      <PageHeader title="Rewards" subtitle="Award points and bonuses — no dollar amounts" />
 
       <Card>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -76,26 +76,22 @@ export function AdminRewardsScreen() {
             </select>
           </label>
           <Input
-            label="Dollar value"
+            label="Points"
             type="number"
-            min="0"
-            value={form.value}
-            onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-          />
-          <Input
-            label="Label"
+            min="1"
             required
-            value={form.label}
-            onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-            placeholder="$100 Gift Card - Mindset Foundations"
+            value={form.points}
+            onChange={(e) => setForm((f) => ({ ...f, points: e.target.value }))}
           />
-          <Input
-            label="Bonus points (optional)"
-            type="number"
-            min="0"
-            value={form.points_awarded}
-            onChange={(e) => setForm((f) => ({ ...f, points_awarded: e.target.value }))}
-          />
+          <div className="sm:col-span-2">
+            <Input
+              label="Label"
+              required
+              value={form.label}
+              onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+              placeholder="Mindset Foundations completion"
+            />
+          </div>
           {error && <p className="text-sm text-danger sm:col-span-2">{error}</p>}
           <div className="flex items-end sm:col-span-2">
             <Button type="submit" loading={saving} className="w-full">
@@ -115,7 +111,7 @@ export function AdminRewardsScreen() {
                 {userMap[r.user_id]?.full_name || r.user_id}
               </p>
             </div>
-            {r.value > 0 && <span className="font-semibold text-primary">${r.value}</span>}
+            <span className="font-semibold text-primary">+{r.points_awarded} pts</span>
           </Card>
         ))}
       </div>

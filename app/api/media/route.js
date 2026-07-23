@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getCollection, stripMongoId } from "@/lib/db";
+import { MEDIA_CATEGORIES } from "@/lib/constants";
 
-const CAN_MANAGE_ROLES = ["Director", "Instructor"];
+const CAN_CREATE_ROLES = ["Director", "Instructor"];
 
 export async function GET() {
   const session = await getSession();
@@ -12,10 +13,14 @@ export async function GET() {
   }
 
   const media = await getCollection("media");
-  const filter =
-    session.role === "Director"
-      ? {}
-      : { status: "approved", audience: session.role };
+  let filter;
+  if (session.role === "Director") {
+    filter = {};
+  } else if (session.role === "Instructor") {
+    filter = { $or: [{ status: "approved" }, { uploader_id: session.id }] };
+  } else {
+    filter = { status: "approved", audience: { $in: [session.role] } };
+  }
   const all = await media.find(filter).sort({ created_at: -1 }).toArray();
 
   const completions = await getCollection("media_completions");
@@ -29,34 +34,30 @@ export async function GET() {
 
 export async function POST(request) {
   const session = await getSession();
-  if (!session || !CAN_MANAGE_ROLES.includes(session.role)) {
+  if (!session || !CAN_CREATE_ROLES.includes(session.role)) {
     return NextResponse.json({ detail: "You can't add media." }, { status: 403 });
   }
 
   const body = await request.json();
-  const { title, description, type, category, url, thumbnail_url, points, duration_minutes, audience } =
-    body;
+  const { title, description, url, category, media_type, audience, points_on_complete } = body;
   if (!title || !url) {
     return NextResponse.json({ detail: "Title and URL are required." }, { status: 400 });
   }
-
-  const users = await getCollection("users");
-  const creator = await users.findOne({ id: session.id });
+  if (!MEDIA_CATEGORIES.includes(category)) {
+    return NextResponse.json({ detail: "Invalid category." }, { status: 400 });
+  }
 
   const doc = {
     id: randomUUID(),
     title,
     description: description || "",
-    type: type || "video",
-    category: category || "Training",
     url,
-    thumbnail_url: thumbnail_url || null,
-    points: Number(points) || 0,
-    duration_minutes: Number(duration_minutes) || 0,
-    audience: Array.isArray(audience) && audience.length ? audience : ["Officer"],
+    category,
+    media_type: media_type || "video",
+    audience: Array.isArray(audience) && audience.length ? audience : ["Officer", "Chaplain", "Partner"],
+    points_on_complete: Number(points_on_complete) || 10,
     status: session.role === "Director" ? "approved" : "pending",
-    created_by: session.id,
-    created_by_name: creator?.full_name || session.email,
+    uploader_id: session.id,
     created_at: new Date().toISOString(),
   };
 

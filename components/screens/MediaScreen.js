@@ -25,14 +25,14 @@ export function MediaScreen() {
                 {m.completed ? (
                   <Badge tone="success">Done</Badge>
                 ) : (
-                  <Badge tone="primary">{m.points} pts</Badge>
+                  <Badge tone="primary">{m.points_on_complete} pts</Badge>
                 )}
               </div>
               <p className="line-clamp-2 text-sm text-text-muted">{m.description}</p>
               <div className="flex items-center gap-2">
                 <CategoryTag category={m.category} />
-                {m.duration_minutes > 0 && (
-                  <span className="text-xs text-text-muted">{m.duration_minutes} min</span>
+                {m.legacy_duration_minutes > 0 && (
+                  <span className="text-xs text-text-muted">{m.legacy_duration_minutes} min</span>
                 )}
               </div>
             </Card>

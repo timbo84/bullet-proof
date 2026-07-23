@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getCollection } from "@/lib/db";
+import { creditPoints } from "@/lib/points";
+import { sendSystemMessage } from "@/lib/messages";
 
 export async function POST(request, { params }) {
   const session = await getSession();
@@ -10,6 +12,9 @@ export async function POST(request, { params }) {
   }
   const { id } = await params;
   const { reflection } = await request.json().catch(() => ({}));
+  if (!reflection || !reflection.trim()) {
+    return NextResponse.json({ detail: "A reflection is required." }, { status: 400 });
+  }
 
   const media = await getCollection("media");
   const item = await media.findOne({ id });
@@ -18,26 +23,30 @@ export async function POST(request, { params }) {
   }
 
   const completions = await getCollection("media_completions");
-  const existing = await completions.findOne({ user_id: session.id, media_id: id });
-  if (existing) {
-    return NextResponse.json({ detail: "You already completed this media item." }, { status: 409 });
-  }
+  const already = await completions.findOne({ user_id: session.id, media_id: id });
+  const points = already ? 0 : Number(item.points_on_complete) || 10;
 
-  const points = Number(item.points) || 0;
   const doc = {
     id: randomUUID(),
-    user_id: session.id,
-    user_role: session.role,
     media_id: id,
-    media_title: item.title,
-    reflection: reflection || "",
+    user_id: session.id,
+    reflection: reflection.trim(),
     points_awarded: points,
-    completed_at: new Date().toISOString(),
+    submitted_at: new Date().toISOString(),
   };
   await completions.insertOne(doc);
 
   const users = await getCollection("users");
-  await users.updateOne({ id: session.id }, { $inc: { points } });
+  const user = await users.findOne({ id: session.id });
+  if (points > 0) {
+    await creditPoints(user, points);
+  }
 
-  return NextResponse.json({ completion: doc }, { status: 201 });
+  const director = await users.findOne({ role: "Director" });
+  if (director) {
+    const body = `Media reflection from ${user.full_name} (${user.nickname})\n${item.title}\n\n${reflection.trim()}`;
+    await sendSystemMessage(session.id, director.id, body);
+  }
+
+  return NextResponse.json({ detail: "Completed", points_awarded: points });
 }

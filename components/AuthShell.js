@@ -15,7 +15,9 @@ export function AuthShell({ title, subtitle, children }) {
             priority
           />
           <div>
-            <h1 className="text-lg font-bold text-text">{title}</h1>
+            <h1 className="font-heading text-xl font-bold uppercase tracking-tight text-text">
+              {title}
+            </h1>
             {subtitle && <p className="text-sm text-text-muted">{subtitle}</p>}
           </div>
         </div>

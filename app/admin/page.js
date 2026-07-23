@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/currentUser";
 import { getCollection, stripMongoId } from "@/lib/db";
 import { Badge, StatCard, Card } from "@/components/ui";
+import { DeclarationsManager } from "@/components/screens/DeclarationsManager";
 
 export default async function AdminHomePage() {
   const user = await getCurrentUser();
@@ -30,6 +31,7 @@ export default async function AdminHomePage() {
         <StatCard label="Media pending review" value={pendingMedia} />
         <StatCard label="Workshops pending review" value={pendingWorkshops} />
       </div>
+      <DeclarationsManager />
       <Card className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
           Recent broadcasts

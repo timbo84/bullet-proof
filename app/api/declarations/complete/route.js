@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { getCollection } from "@/lib/db";
+import { todayCentral } from "@/lib/dates";
+import { creditPoints } from "@/lib/points";
 
 export async function POST() {
   const session = await getSession();
@@ -9,28 +11,33 @@ export async function POST() {
     return NextResponse.json({ detail: "Not authenticated." }, { status: 401 });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const completions = await getCollection("declaration_completions");
-  const existing = await completions.findOne({ user_id: session.id, date: today });
+  const declarationsList = await getCollection("declarations_list");
+  const listDoc = await declarationsList.findOne({ id: "singleton" });
+  const points = listDoc?.points ?? 15;
+
+  const dailyCompletions = await getCollection("daily_completions");
+  const day = todayCentral();
+
+  const existing = await dailyCompletions.findOne({ user_id: session.id, completion_date: day });
   if (existing) {
-    return NextResponse.json({ detail: "Already completed today." }, { status: 409 });
+    return NextResponse.json({ detail: "Already completed today.", points_awarded: 0 });
   }
 
-  const settings = await getCollection("settings");
-  const pointsSetting = await settings.findOne({ key: "daily_declaration_points" });
-  const points = pointsSetting?.value ?? 15;
-
-  const doc = {
-    id: randomUUID(),
-    user_id: session.id,
-    date: today,
-    created_at: new Date().toISOString(),
-    points_awarded: points,
-  };
-  await completions.insertOne(doc);
+  try {
+    await dailyCompletions.insertOne({
+      id: randomUUID(),
+      user_id: session.id,
+      completion_date: day,
+      created_at: new Date().toISOString(),
+    });
+  } catch {
+    // Unique index race — someone else's request beat us to it.
+    return NextResponse.json({ detail: "Already completed today.", points_awarded: 0 });
+  }
 
   const users = await getCollection("users");
-  await users.updateOne({ id: session.id }, { $inc: { points } });
+  const user = await users.findOne({ id: session.id });
+  await creditPoints(user, points);
 
-  return NextResponse.json({ ok: true, points_awarded: points });
+  return NextResponse.json({ detail: "Completed", points_awarded: points });
 }

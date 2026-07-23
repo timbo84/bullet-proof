@@ -9,17 +9,30 @@ import { ROLES } from "@/lib/roles";
 const SELF_SERVE_ROLES = ROLES.filter((role) => role !== "Director");
 
 export async function POST(request) {
-  const { email, password, full_name, nickname, role } = await request.json();
+  const { email, password, full_name, nickname, role, district_id, linked_officer_nickname } =
+    await request.json();
 
-  if (!email || !password || !full_name) {
+  if (!email || !password || !full_name || !nickname) {
     return NextResponse.json(
-      { detail: "Name, email, and password are required." },
+      { detail: "Name, nickname, email, and password are required." },
       { status: 400 }
     );
   }
   if (password.length < 8) {
     return NextResponse.json(
       { detail: "Password must be at least 8 characters." },
+      { status: 400 }
+    );
+  }
+  if (!SELF_SERVE_ROLES.includes(role)) {
+    return NextResponse.json({ detail: "Invalid role." }, { status: 400 });
+  }
+  if ((role === "Officer" || role === "Chaplain") && !district_id) {
+    return NextResponse.json({ detail: "District is required." }, { status: 400 });
+  }
+  if (role === "Partner" && !linked_officer_nickname) {
+    return NextResponse.json(
+      { detail: "Your officer's nickname is required." },
       { status: 400 }
     );
   }
@@ -34,21 +47,34 @@ export async function POST(request) {
     );
   }
 
-  const selectedRole = SELF_SERVE_ROLES.includes(role) ? role : "Officer";
+  if (role === "Officer") {
+    const nicknameTaken = await users.findOne({ nickname, role: "Officer" });
+    if (nicknameTaken) {
+      return NextResponse.json({ detail: "That nickname is already taken." }, { status: 409 });
+    }
+  }
+
+  if (role === "Partner") {
+    const officer = await users.findOne({ nickname: linked_officer_nickname, role: "Officer" });
+    if (!officer) {
+      return NextResponse.json({ detail: "No officer found with that nickname." }, { status: 400 });
+    }
+  }
+
   const user = {
     id: randomUUID(),
     email: normalizedEmail,
     password_hash: await hashPassword(password),
     full_name,
-    nickname: nickname || full_name.split(" ")[0],
-    role: selectedRole,
-    district_id: null,
+    nickname,
+    role,
+    district_id: district_id || null,
+    linked_officer_nickname: role === "Partner" ? linked_officer_nickname : null,
     points: 0,
     active: true,
     created_at: new Date().toISOString(),
     bio: "",
     photo: null,
-    linked_officer_id: null,
   };
 
   await users.insertOne(user);

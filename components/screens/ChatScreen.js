@@ -28,7 +28,7 @@ export function ChatScreen({ userId }) {
     const res = await fetch(`/api/messages/${userId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draft }),
+      body: JSON.stringify({ body: draft }),
     });
     if (res.ok) {
       setDraft("");
@@ -71,7 +71,7 @@ export function ChatScreen({ userId }) {
                   mine ? "bg-primary text-bg" : "border border-border bg-surface text-text"
                 }`}
               >
-                {msg.content}
+                {msg.body}
               </div>
             </div>
           );

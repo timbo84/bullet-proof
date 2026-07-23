@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getCollection } from "@/lib/db";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
@@ -26,9 +27,13 @@ export async function POST(request) {
     }
   );
 
-  // NOTE: no email delivery is wired up — sending the reset link is out of
-  // scope for now. In development we hand back the token directly so the
-  // reset-password flow can still be exercised end-to-end.
-  const devToken = process.env.NODE_ENV !== "production" ? resetToken : undefined;
+  const origin = process.env.APP_PUBLIC_URL || request.nextUrl.origin;
+  const resetUrl = `${origin}/reset-password?token=${resetToken}`;
+  const { sent } = await sendPasswordResetEmail({ to: user.email, resetUrl });
+
+  // If RESEND_API_KEY isn't configured, sendPasswordResetEmail is a no-op —
+  // fall back to handing the token back directly so the flow is still
+  // testable outside production.
+  const devToken = !sent && process.env.NODE_ENV !== "production" ? resetToken : undefined;
   return NextResponse.json({ ok: true, dev_token: devToken });
 }

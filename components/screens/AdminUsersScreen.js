@@ -3,10 +3,11 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { useAuth } from "@/components/AuthProvider";
 import { Avatar, Badge, Card, Input, PageHeader, Spinner } from "@/components/ui";
 import { ROLES } from "@/lib/roles";
 
-function UserRow({ user, districts, onUpdate }) {
+function UserRow({ user, districts, onUpdate, onDelete, isSelf }) {
   const [saving, setSaving] = useState(false);
 
   async function update(field, value) {
@@ -57,11 +58,20 @@ function UserRow({ user, districts, onUpdate }) {
           {user.active ? "Active" : "Disabled"}
         </Badge>
       </button>
+      {!isSelf && (
+        <button
+          onClick={() => onDelete(user.id)}
+          className="text-sm text-text-secondary hover:text-danger"
+        >
+          Delete
+        </button>
+      )}
     </Card>
   );
 }
 
 export function AdminUsersScreen() {
+  const { user: me } = useAuth();
   const { data, mutate } = useSWR("/api/admin/users", fetcher);
   const { data: districtData } = useSWR("/api/districts", fetcher);
   const [query, setQuery] = useState("");
@@ -76,6 +86,12 @@ export function AdminUsersScreen() {
     );
   });
 
+  async function handleDelete(id) {
+    if (!window.confirm("Delete this user? This can't be undone.")) return;
+    await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+    mutate();
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Users" subtitle={`${users?.length ?? 0} accounts`} />
@@ -87,7 +103,14 @@ export function AdminUsersScreen() {
       {users === null && <Spinner />}
       <div className="space-y-2">
         {filtered.map((u) => (
-          <UserRow key={u.id} user={u} districts={districts} onUpdate={mutate} />
+          <UserRow
+            key={u.id}
+            user={u}
+            districts={districts}
+            onUpdate={mutate}
+            onDelete={handleDelete}
+            isSelf={u.id === me?.id}
+          />
         ))}
       </div>
     </div>

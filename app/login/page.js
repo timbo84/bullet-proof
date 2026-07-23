@@ -72,6 +72,9 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        <Link href="/privacy-policy" className="text-xs text-text-muted hover:text-text-secondary">
+          Privacy Policy
+        </Link>
       </div>
       {showForgot && <ForgotPasswordModal onClose={() => setShowForgot(false)} />}
     </AuthShell>

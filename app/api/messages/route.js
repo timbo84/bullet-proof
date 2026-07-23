@@ -21,12 +21,12 @@ export async function GET() {
           },
         },
       },
-      { $sort: { created_at: -1 } },
+      { $sort: { sent_at: -1 } },
       {
         $group: {
           _id: "$otherId",
-          lastMessage: { $first: "$content" },
-          lastAt: { $first: "$created_at" },
+          lastMessage: { $first: "$body" },
+          lastAt: { $first: "$sent_at" },
           unread: {
             $sum: {
               $cond: [{ $and: [{ $eq: ["$to_user_id", meId] }, { $eq: ["$read", false] }] }, 1, 0],

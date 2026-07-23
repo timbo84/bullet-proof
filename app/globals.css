@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0c;
-  --color-surface: #161619;
-  --color-surface-raised: #1e1e23;
-  --color-border: #2a2a30;
-  --color-primary: #c9a227;
-  --color-primary-hover: #ddb63a;
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-raised: #1e1e1e;
+  --color-border: #2a2a2a;
+  --color-primary: #c9a961;
+  --color-primary-hover: #d9bc7c;
   --color-danger: #e5484d;
   --color-success: #3cb179;
-  --color-text: #f5f4f0;
-  --color-text-secondary: #b8b6ae;
-  --color-text-muted: #7c7a73;
+  --color-text: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #52525b;
 
-  --color-category-finance: #e5883a;
-  --color-category-fitness: #3cb179;
-  --color-category-family: #c26bd6;
-  --color-category-wellness: #3aa7b0;
-  --color-category-training: #4d8fe5;
-  --color-category-community: #9a7ce5;
+  /* Immutable per design_guidelines.json — do not alter. Legacy categories
+     outside this set (e.g. "Community") fall back to the Wellness color. */
+  --color-category-finance: #ff9500;
+  --color-category-fitness: #34c759;
+  --color-category-family: #e74c3c;
+  --color-category-wellness: #9b59b6;
+  --color-category-training: #4a90e2;
 
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-heading: var(--font-barlow-condensed), var(--font-manrope), system-ui, sans-serif;
 }
 
 html,

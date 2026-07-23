@@ -42,7 +42,7 @@ export function ForgotPasswordModal({ onClose }) {
             </p>
             {devToken && (
               <p className="rounded-md border border-dashed border-border p-3 text-xs text-text-muted">
-                Dev mode (email delivery isn&apos;t wired up yet):{" "}
+                Dev mode (no email service configured):{" "}
                 <Link
                   href={`/reset-password?token=${devToken}`}
                   className="font-semibold text-primary"
